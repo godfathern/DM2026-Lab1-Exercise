@@ -2,6 +2,7 @@ import os
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import nltk
@@ -363,11 +364,92 @@ def make_tools(session):
         session.store_result("describe_data_tool", args, summary)
         return summary
 
+    @tool
+    def inspect_data_tool(
+        n_rows: int = 5,
+        mode: str = "random",
+        max_text_len: Optional[int] = 250,
+        random_state: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Peeks at sample rows of session.dataframe across all columns with configurable text truncation.
+        
+        Args:
+            n_rows: Number of sample rows to inspect (default 5).
+            mode: Inspection sampling mode - "random" for random rows, or "head" for first N rows (default "random").
+            max_text_len: Maximum character length for string fields (default 250, or None for unlimited).
+            random_state: Seed for reproducible random row selection when mode is "random" (default None).
+            
+        Returns:
+            Dict containing total dataset rows, column list, column data types, inspected row indices, and sample records.
+        """
+        if session.dataframe is None:
+            raise ValueError("session.dataframe is not initialized. Load a dataset first.")
+
+        if n_rows <= 0:
+            raise ValueError("n_rows must be a positive integer.")
+
+        if mode not in ["random", "head"]:
+            raise ValueError("mode must be either 'random' or 'head'.")
+
+        total_rows = len(session.dataframe)
+        sample_count = min(n_rows, total_rows)
+
+        if mode == "random":
+            subset_df = session.dataframe.sample(n=sample_count, random_state=random_state)
+        else:
+            subset_df = session.dataframe.head(sample_count)
+
+        inspected_indices = subset_df.index.tolist()
+
+        # Inspect column names and string data types
+        columns = session.dataframe.columns.tolist()
+        dtypes = {col: str(dtype) for col, dtype in session.dataframe.dtypes.items()}
+
+        records = []
+        for orig_idx, row in subset_df.iterrows():
+            record_dict = {"_row_index": int(orig_idx)}
+            for col in columns:
+                val = row[col]
+                # Convert NaN / None explicitly to None for strict JSON serialization
+                if pd.isna(val) if not isinstance(val, (list, np.ndarray)) else False:
+                    record_dict[col] = None
+                elif max_text_len is not None and isinstance(val, str) and len(val) > max_text_len:
+                    record_dict[col] = val[:max_text_len] + "..."
+                else:
+                    # Convert un-serializable objects (like numpy arrays or pandas Series) cleanly
+                    record_dict[col] = val.tolist() if isinstance(val, (np.ndarray, pd.Series)) else val
+            records.append(record_dict)
+
+        result_id = session.next_result_id("inspect_data")
+        summary = {
+            "result_id": result_id,
+            "total_rows": total_rows,
+            "inspected_rows_count": len(records),
+            "mode": mode,
+            "columns": columns,
+            "dtypes": dtypes,
+            "inspected_indices": inspected_indices,
+            "max_text_len": max_text_len,
+            "random_state": random_state,
+            "sample_records": records
+        }
+
+        args = {
+            "n_rows": n_rows,
+            "mode": mode,
+            "max_text_len": max_text_len,
+            "random_state": random_state
+        }
+
+        session.store_result("inspect_data_tool", args, summary)
+        return summary
+
     return [
         list_files_tool,
         check_missing_tool,
         check_duplicates_tool,
         tokenize_tool,
         sample_data_tool,
-        describe_data_tool
+        describe_data_tool,
+        inspect_data_tool
     ]

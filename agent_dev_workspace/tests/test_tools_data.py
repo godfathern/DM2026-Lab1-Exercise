@@ -159,3 +159,24 @@ def test_describe_data_tool():
 
     # Verify box plot figure was set on session.pending_figure
     assert session.pending_figure is not None
+
+def test_inspect_data_tool():
+    """Custom test for inspect_data_tool (Known Answer #12: No fixed contract)."""
+    session = get_loaded_session()
+    tools = make_tools(session)
+    inspect_data_tool = next(t for t in tools if t.name == "inspect_data_tool")
+
+    # Test random sampling mode
+    res_rand = inspect_data_tool.invoke({"n_rows": 5, "mode": "random", "random_state": 42})
+    assert res_rand["total_rows"] == 8
+    assert res_rand["inspected_rows_count"] == 5
+    assert res_rand["mode"] == "random"
+    assert "text" in res_rand["columns"]
+    assert len(res_rand["sample_records"]) == 5
+
+    # Test head mode with short text truncation (max_text_len=10)
+    res_head = inspect_data_tool.invoke({"n_rows": 3, "mode": "head", "max_text_len": 10})
+    assert res_head["inspected_indices"] == [0, 1, 2]
+    assert res_head["inspected_rows_count"] == 3
+    # "always alpha alpha alpha beta" (29 chars) truncated to 10 chars + "..."
+    assert res_head["sample_records"][0]["text"] == "always alp..."
