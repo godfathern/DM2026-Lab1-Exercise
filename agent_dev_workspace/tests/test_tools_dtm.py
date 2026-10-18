@@ -36,6 +36,12 @@ def test_build_dtm_tool():
     # Check vocabulary matches 'alpha', 'always', 'beta', 'delta', 'gamma'
     assert session.feature_names == ["alpha", "always", "beta", "delta", "gamma"]
 
+    # Check key rename and feature_sample order by frequency
+    assert "vocabulary_sample" not in result
+    sample = result["feature_sample"]
+    assert set(sample[:2]) == {"always", "gamma"}
+    assert sample[2:] == ["alpha", "delta", "beta"]
+
 def test_term_frequency_tool():
     # Fresh session for isolated test run
     session = SessionState()

@@ -18,7 +18,7 @@ def make_tools(session):
         category_name: str,
         filtering_method: str = "tfidf",
         algorithm: str = "fpgrowth",
-        min_sup: int = 1,
+        min_sup: int = 60,
         k: int = 10,
         top_n: int = 20
     ) -> Dict[str, Any]:
@@ -28,7 +28,7 @@ def make_tools(session):
             category_name: Category label in session.dataframe to filter and mine (e.g. "catA").
             filtering_method: Term selection method - "tfidf", "variance", or "term_frequency" (default "tfidf").
             algorithm: PAMI mining algorithm - "fpgrowth", "topk", or "maxfpgrowth" (default "fpgrowth").
-            min_sup: Minimum support count threshold required for "fpgrowth" and "maxfpgrowth" (default 1).
+            min_sup: Minimum support count threshold required for "fpgrowth" and "maxfpgrowth" (default 60).
             k: Number of top patterns to return for "topk" algorithm (default 10).
             top_n: Maximum number of mined patterns to return in summary preview (default 20).
             

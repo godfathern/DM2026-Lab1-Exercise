@@ -57,6 +57,14 @@ def make_tools(session):
         total_elements = int(n_rows * n_cols)
         sparsity_pct = float(100.0 * (1.0 - non_zero / total_elements)) if total_elements > 0 else 0.0
 
+        # Extract top 10 terms by total document frequency for feature_sample
+        if n_cols > 0:
+            counts = np.asarray(X.sum(axis=0)).ravel()
+            top_indices = np.argsort(-counts)[:10]
+            feature_sample = [feature_names[i] for i in top_indices]
+        else:
+            feature_sample = []
+
         result_id = session.next_result_id("dtm")
         summary = {
             "result_id": result_id,
@@ -65,7 +73,7 @@ def make_tools(session):
             "non_zero": non_zero,
             "total_elements": total_elements,
             "sparsity_pct": round(sparsity_pct, 4),
-            "vocabulary_sample": feature_names[:10]
+            "feature_sample": feature_sample
         }
 
         args = {
